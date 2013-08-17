@@ -1,0 +1,12 @@
+/TheListener/Debug
+/TheListener/Release
+
+/Debug
+/Release
+
+/ipch
+
+*.sdf
+*.opensdf
+*.suo
+
