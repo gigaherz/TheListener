@@ -1,7 +1,11 @@
 #include "stdafx.h"
+#include "SysFont.h"
 #include "LogWindow.h"
 
-CLogWindow::CLogWindow(void)
+static LPTSTR ClassName = _T("Log Window");
+
+CLogWindow::CLogWindow(CLoggerContext *ctx)
+	: m_Context(ctx)
 {
 }
 
@@ -9,7 +13,10 @@ CLogWindow::~CLogWindow(void)
 {
 }
 
-static LPTSTR ClassName = _T("Log Window");
+void CLogWindow::ItemAdded()
+{
+	SendMessage(WM_USER+1);
+}
 
 void CLogWindow::OnCreate()
 {
@@ -18,14 +25,22 @@ void CLogWindow::OnCreate()
 
 	// Tasks such as setting the icon, creating child windows, or anything
 	// associated with creating windows are normally performed here.
-
-	TRACE(_T("OnCreate\n"));
+	
+	listFont = CSysFont::Instance.GetDefaultDialogFont();
+	
+	CRect rect = GetClientRect();
+	
+	m_ListBox.Create(this);
+	m_ListBox.SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), 0);
+	m_ListBox.SetFont(&listFont);	
+	m_ListBox.SetCount(m_Context->m_Items.size());
+		
+	m_Context->m_LogWindow = this;
 }
 
 void CLogWindow::OnDestroy()
 {
-	// End the application when the window is destroyed
-	::PostQuitMessage(0);
+	m_Context->m_LogWindow = NULL;
 }
 
 void CLogWindow::OnDraw(CDC* pDC)
@@ -38,12 +53,14 @@ void CLogWindow::OnInitialUpdate()
 {
 	// OnInitialUpdate is called after the window is created.
 	// Tasks which are to be done after the window is created go here.
-
-	TRACE(_T("OnInitialUpdate\n"));
 }
 
 void CLogWindow::OnSize()
 {
+	CRect rect = GetClientRect();
+
+	m_ListBox.SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), 0);
+
 	// Force the window to be repainted during resizing
 	Invalidate();	
 }
@@ -51,6 +68,8 @@ void CLogWindow::OnSize()
 void CLogWindow::PreCreate(CREATESTRUCT& cs)
 {
 	cs.lpszClass = ClassName;		// Window Class
+	cs.x = 0;
+	cs.y = 0;
 	cs.cx = 600;
 	cs.cy = 800;
 }
@@ -77,6 +96,109 @@ LRESULT CLogWindow::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 	HANDLE_MSG_R(WM_DESTROY, OnDestroy);
 	HANDLE_MSG(WM_SIZE, OnSize);
+
+	case WM_USER+1:
+		{
+			m_ListBox.SetCount(m_Context->m_Items.size());
+			m_ListBox.SetCurSel(m_Context->m_Items.size()-1);
+		}
+		break;
+
+	case WM_MEASUREITEM:
+		{
+			LPMEASUREITEMSTRUCT mi = (LPMEASUREITEMSTRUCT)lParam;
+
+			CDC *dc = GetDC();
+			
+			CFont def = CSysFont::Instance.GetDefaultDialogFont();
+
+			dc->SelectObject(&def);
+			
+			TEXTMETRIC tm; 
+            dc->GetTextMetrics(tm); 
+
+			mi->itemHeight = tm.tmHeight + 4;
+	
+			ReleaseDC(dc);
+		}
+		return TRUE;
+		
+	case WM_DRAWITEM:
+		{
+			int yPos;
+
+			CBrush *brush;
+
+			CSize size = CSize();
+			CRect rcMessage;
+			CRect rcSource;
+
+			LPDRAWITEMSTRUCT di = (LPDRAWITEMSTRUCT) lParam; 
+
+			CRect rcItem = di->rcItem;
+			CDC *dc = FromHandle(di->hDC);
+
+			CLogItem *item = m_Context->m_Items.at(di->itemID);
+
+            // If there are no list box items, skip this message. 
+            if (di->itemID == -1) 
+            { 
+                break; 
+            } 
+ 
+            // Draw the bitmap and text for the list box item. Draw a 
+            // rectangle around the bitmap if it is selected. 
+            switch (di->itemAction) 
+            { 
+                case ODA_SELECT: 
+					break;
+
+                case ODA_DRAWENTIRE: 
+					
+                    if (di->itemState & ODS_SELECTED) 
+						brush = FromHandle((HBRUSH) (COLOR_HIGHLIGHT+1));
+					else
+						brush = FromHandle((HBRUSH) (COLOR_WINDOW+1));
+
+					dc->FillRect(rcItem, brush);
+					
+					TEXTMETRIC tm;
+                    dc->GetTextMetrics(tm); 
+					
+                    yPos = (rcItem.bottom + rcItem.top - tm.tmHeight) / 2;
+  			
+					if(item->m_Source.size() > 0)
+					{
+						size = dc->GetTextExtentPoint32W(item->m_Source.c_str(), item->m_Source.size());
+					}
+
+					rcMessage = CRect(yPos, yPos, rcItem.right-yPos, rcItem.bottom-yPos);
+					rcMessage.right -= min(size.cx, rcItem.Width() / 4);
+
+					dc->SelectObject(brush);  
+					dc->DrawText(item->m_Message.c_str(), item->m_Message.size(), rcMessage, DT_SINGLELINE | DT_LEFT | DT_END_ELLIPSIS);
+
+					if (item->m_Source.size() > 0)
+					{
+						rcSource = CRect(rcMessage.left, rcMessage.top, rcItem.right - yPos, rcMessage.bottom);
+						dc->DrawText(item->m_Source.c_str(), item->m_Source.size(), rcSource, DT_SINGLELINE | DT_RIGHT | DT_PATH_ELLIPSIS);
+					}
+
+                    // Is the item selected? 
+                    if (di->itemState & ODS_SELECTED) 
+                    {
+                        dc->DrawFocusRect(rcItem); 
+                    } 
+                    break; 
+ 
+                case ODA_FOCUS: 
+ 
+                    // Do not process focus changes. The focus caret 
+                    // (outline rectangle) indicates the selection. 
+                    break; 
+            }
+		}
+		return TRUE;
 	}
 
 	// pass unhandled messages on for default processing

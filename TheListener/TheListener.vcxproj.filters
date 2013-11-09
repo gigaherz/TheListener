@@ -135,6 +135,15 @@
     <ClInclude Include="LoggerContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LogItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OwnerDrawnListBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NamedPipe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TrayApp.cpp">
@@ -159,6 +168,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LogWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OwnerDrawnListBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoggerContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NamedPipe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

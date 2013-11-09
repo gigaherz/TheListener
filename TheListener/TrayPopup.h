@@ -40,9 +40,11 @@ private:
 
 	CTrayIconPosition m_PositionFinder;
 
-	std::vector<CButton*> buttons;
+	std::map<CLoggerContext*, CButton*> buttons;
 	
 	CScrollBar scrollBar;
+
+	CFont defFont;
 
 	int lastVScroll;
 };

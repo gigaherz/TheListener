@@ -1,11 +1,23 @@
 #pragma once
 
+#include "LoggerContext.h"
+
+#include "OwnerDrawnListBox.h"
+
 class CLogWindow :
 	public CWnd
 {
+	CLoggerContext *m_Context;
+
+	COwnerDrawnListBox m_ListBox;
+
+	CFont listFont;
+
 public:
-	CLogWindow(void);
+	CLogWindow(CLoggerContext *ctx);
 	virtual ~CLogWindow(void);
+
+	void ItemAdded();
 	
 protected:
 	virtual void OnCreate();

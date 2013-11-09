@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "SysFont.h"
 #include "TrayPopup.h"
+#include "TrayApp.h"
 #include "resource.h"
 
 #define MSG_TRAYICON (WM_USER+0)
@@ -87,42 +88,27 @@ void CTrayPopup::OnCreate()
 
 	CRect cr = GetClientRect();
 
-	CFont def = CSysFont::Instance.GetDefaultDialogFont();
+	defFont = CSysFont::Instance.GetDefaultDialogFont();
 	
 	int cy = 8;
 
-	button1.Create(this);
-	button1.SetWindowTextW(_T("Item1"));
-	button1.SetWindowPos(NULL, 8, cy, cr.Width()-16, 60, 0);
-	button1.SetFont(&def);
-	button1.SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&context1);
+	const CTrayApp& thisApp = GetRunningApp();
 
-	cy += 68;
+	for(auto it = thisApp.contexts.begin(); it != thisApp.contexts.end(); it++)
+	{
+		CLoggerContext* ctx = *it;
+		CButton* btn = new CButton();
+		btn->Create(this);
+		btn->SetWindowTextW(ctx->GetPipeName());
+		btn->SetWindowPos(NULL, 8, cy, cr.Width()-16, 60, 0);
+		btn->SetFont(&defFont);
+		btn->SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)ctx);
+		
+		buttons[ctx] = btn;
+		
+		cy += 68;
+	}
 	
-	button2.Create(this);
-	button2.SetWindowTextW(_T("Item2"));
-	button2.SetWindowPos(NULL, 8, cy, cr.Width()-16, 60, 0);
-	button2.SetFont(&def);
-	button2.SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&context2);
-	
-	cy += 68;
-
-	button3.Create(this);
-	button3.SetWindowTextW(_T("Item3"));
-	button3.SetWindowPos(NULL, 8, cy, cr.Width()-16, 60, 0);
-	button3.SetFont(&def);
-	button3.SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&context3);
-	
-	cy += 68;
-
-	button4.Create(this);
-	button4.SetWindowTextW(_T("Item4"));
-	button4.SetWindowPos(NULL, 8, cy, cr.Width()-16, 60, 0);
-	button4.SetFont(&def);
-	button4.SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&context4);
-	
-	cy += 68;
-
 	SCROLLINFO nfo;
 	nfo.cbSize = sizeof(SCROLLINFO);
 	nfo.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
@@ -163,7 +149,7 @@ BOOL CTrayPopup::OnCommand(WPARAM wParam, LPARAM lParam)
 void CTrayPopup::OnDestroy()
 {
 	RemoveTrayIcon();
-
+	
 	// End the application when the window is destroyed
 	::PostQuitMessage(0);
 }
@@ -188,10 +174,17 @@ void CTrayPopup::OnSize()
 	Invalidate();
 	
 	CRect cr = GetClientRect();
+	
+	const CTrayApp& thisApp = GetRunningApp();
 
-	button1.SetWindowPos(NULL, 8, 8, cr.Width()-16, 60, 0);
-	button2.SetWindowPos(NULL, 8, 68+8, cr.Width()-16, 60, 0);
-	button3.SetWindowPos(NULL, 8, 68+68+8, cr.Width()-16, 60, 0);	
+	for(auto it = thisApp.contexts.begin(); it != thisApp.contexts.end(); it++)
+	{
+		CLoggerContext* ctx = *it;
+
+		CButton* btn = buttons[ctx];
+		
+		btn->SetWindowPos(NULL, 0, 0, cr.Width()-16, 60, SWP_NOMOVE);
+	}
 		
 	SCROLLINFO nfo;
 	nfo.cbSize = sizeof(SCROLLINFO);
@@ -291,6 +284,7 @@ LRESULT CTrayPopup::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				
 				LONG_PTR ctx = ::GetWindowLongPtr((HWND)lParam, GWLP_USERDATA);
 
+				GetRunningApp().ShowLoggerWindow((CLoggerContext*)ctx);
 
 				break;
 			}
@@ -302,6 +296,10 @@ LRESULT CTrayPopup::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 		HANDLE_MSG(SC_MINIMIZE, Minimize);
 		}
+		break;
+
+	case WM_QUIT:		
+		RemoveTrayIcon();
 		break;
 	}
 

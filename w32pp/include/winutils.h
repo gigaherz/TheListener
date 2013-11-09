@@ -452,7 +452,7 @@ namespace Win32xx
 		UNREFERENCED_PARAMETER(str); // no-op
   #endif
 	}
-
+	
   #ifndef _WIN32_WCE		// for Win32/64 operating systems, not WinCE
 
 	inline int GetWinVersion()
