@@ -62,7 +62,8 @@ void CLogWindow::OnSize()
 	m_ListBox.SetWindowPos(NULL, rect.left, rect.top, rect.Width(), rect.Height(), 0);
 
 	// Force the window to be repainted during resizing
-	Invalidate();	
+	Invalidate();
+    m_ListBox.Invalidate();
 }
 
 void CLogWindow::PreCreate(CREATESTRUCT& cs)
@@ -125,7 +126,8 @@ LRESULT CLogWindow::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 	case WM_DRAWITEM:
 		{
-			int yPos;
+			int margin;
+            DWORD fg;
 
 			CBrush *brush;
 
@@ -149,10 +151,9 @@ LRESULT CLogWindow::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             // Draw the bitmap and text for the list box item. Draw a 
             // rectangle around the bitmap if it is selected. 
             switch (di->itemAction) 
-            { 
+            {
+                case ODA_FOCUS:
                 case ODA_SELECT: 
-					break;
-
                 case ODA_DRAWENTIRE: 
 					
                     if (di->itemState & ODS_SELECTED) 
@@ -160,27 +161,33 @@ LRESULT CLogWindow::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 					else
 						brush = FromHandle((HBRUSH) (COLOR_WINDOW+1));
 
+                    if (di->itemState & ODS_SELECTED)
+                        fg = GetSysColor(COLOR_HIGHLIGHTTEXT);
+                    else
+                        fg = GetSysColor(COLOR_WINDOWTEXT);
+
 					dc->FillRect(rcItem, brush);
 					
 					TEXTMETRIC tm;
                     dc->GetTextMetrics(tm); 
 					
-                    yPos = (rcItem.bottom + rcItem.top - tm.tmHeight) / 2;
+                    margin = (rcItem.bottom - rcItem.top - tm.tmHeight) / 2;
   			
 					if(item->m_Source.size() > 0)
 					{
 						size = dc->GetTextExtentPoint32W(item->m_Source.c_str(), item->m_Source.size());
 					}
 
-					rcMessage = CRect(yPos, yPos, rcItem.right-yPos, rcItem.bottom-yPos);
-					rcMessage.right -= min(size.cx, rcItem.Width() / 4);
+                    dc->SetTextColor(0x00000000);
+                    dc->SetBkMode(TRANSPARENT);
 
-					dc->SelectObject(brush);  
+                    rcMessage = CRect(rcItem.left + margin, rcItem.top + margin, rcItem.right - margin, rcItem.bottom - margin);
+					rcMessage.right -= min(size.cx, rcItem.Width() / 4);
 					dc->DrawText(item->m_Message.c_str(), item->m_Message.size(), rcMessage, DT_SINGLELINE | DT_LEFT | DT_END_ELLIPSIS);
 
 					if (item->m_Source.size() > 0)
 					{
-						rcSource = CRect(rcMessage.left, rcMessage.top, rcItem.right - yPos, rcMessage.bottom);
+                        rcSource = CRect(rcMessage.left, rcMessage.top, rcItem.right - margin, rcMessage.bottom);
 						dc->DrawText(item->m_Source.c_str(), item->m_Source.size(), rcSource, DT_SINGLELINE | DT_RIGHT | DT_PATH_ELLIPSIS);
 					}
 
@@ -189,13 +196,7 @@ LRESULT CLogWindow::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     {
                         dc->DrawFocusRect(rcItem); 
                     } 
-                    break; 
- 
-                case ODA_FOCUS: 
- 
-                    // Do not process focus changes. The focus caret 
-                    // (outline rectangle) indicates the selection. 
-                    break; 
+                    break;
             }
 		}
 		return TRUE;
